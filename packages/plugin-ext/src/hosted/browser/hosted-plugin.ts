@@ -302,12 +302,15 @@ export class HostedPluginSupport {
      */
     protected async syncPlugins(): Promise<void> {
         let initialized = 0;
-        const syncPluginsMeasurement = this.createMeasurement('syncPlugins');
+        const waitPluginsMeasurement = this.createMeasurement('waitForDeployment');
+        let syncPluginsMeasurement: () => number;
 
         const toUnload = new Set(this.contributions.keys());
         try {
             const pluginIds: string[] = [];
             const deployedPluginIds = await this.server.getDeployedPluginIds();
+            this.logMeasurement('Waiting for backend deployment', waitPluginsMeasurement);
+            syncPluginsMeasurement = this.createMeasurement('syncPlugins');
             for (const pluginId of deployedPluginIds) {
                 toUnload.delete(pluginId);
                 if (!this.contributions.has(pluginId)) {
@@ -336,7 +339,7 @@ export class HostedPluginSupport {
             }
         }
 
-        this.logMeasurement('Sync', initialized, syncPluginsMeasurement);
+        this.logMeasurement(`Sync of ${this.getPluginCount(initialized)}`, syncPluginsMeasurement);
     }
 
     /**
@@ -374,7 +377,7 @@ export class HostedPluginSupport {
             }
         }
 
-        this.logMeasurement('Load contributions', loaded, loadPluginsMeasurement);
+        this.logMeasurement(`Load contributions of ${this.getPluginCount(loaded)}`, loadPluginsMeasurement);
 
         return hostContributions;
     }
@@ -444,7 +447,7 @@ export class HostedPluginSupport {
             return;
         }
 
-        this.logMeasurement('Start', started, startPluginsMeasurement);
+        this.logMeasurement(`Start of ${this.getPluginCount(started)}`, startPluginsMeasurement);
     }
 
     protected async obtainManager(host: string, hostContributions: PluginContributions[], toDisconnect: DisposableCollection): Promise<PluginManagerExt | undefined> {
@@ -712,15 +715,19 @@ export class HostedPluginSupport {
         };
     }
 
-    protected logMeasurement(prefix: string, count: number, measurement: () => number): void {
+    protected logMeasurement(measurementName: string, measurement: () => number): void {
         const duration = measurement();
         if (duration === Number.NaN) {
             // Measurement was prevented by native API, do not log NaN duration
             return;
         }
 
-        const pluginCount = `${count} plugin${count === 1 ? '' : 's'}`;
-        console.log(`[${this.clientId}] ${prefix} of ${pluginCount} took: ${duration.toFixed(1)} ms`);
+        const timeFromFrontendStart = `Finished ${(performance.now() / 1000).toFixed(3)} s after frontend start`;
+        console.log(`[${this.clientId}] ${measurementName} took: ${duration.toFixed(1)} ms [${timeFromFrontendStart}]`);
+    }
+
+    protected getPluginCount(plugins: number): string {
+        return `${plugins} plugin${plugins === 1 ? '' : 's'}`;
     }
 
     protected readonly webviewsToRestore = new Set<WebviewWidget>();

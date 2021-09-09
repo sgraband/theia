@@ -13,6 +13,7 @@
 - [task] `TaskDefinition.properties.required` is now optional to align with the specification [#10015](https://github.com/eclipse-theia/theia/pull/10015)
 - [core] `setTopPanelVisibily` renamed to `setTopPanelVisibility` [#10020](https://github.com/eclipse-theia/theia/pull/10020)
 - [application-manager] break `rebuild` API: second argument is now an optional object instead of an optional array.
+- [plugin-ext] add additional startup logging for plugin starting and application loading [#10116](https://github.com/eclipse-theia/theia/pull/10116) - Contributed on behalf of STMicroelectronics
 
 ## v1.17.2 - 9/1/2021
 
