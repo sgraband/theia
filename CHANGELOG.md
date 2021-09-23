@@ -6,6 +6,7 @@
 - [plugin] Avoid infinite redirect loop for webview [#5007](https://github.com/eclipse-theia/theia/issues/5007)
 - [plugin] Allow downloads for webview [#5007](https://github.com/eclipse-theia/theia/issues/5007)
 - [scripts] added startup performance measurement script [#9777](https://github.com/eclipse-theia/theia/pull/9777) - Contributed on behalf of STMicroelectronics
+- [scripts] added extension impact script [#](https://github.com/eclipse-theia/theia/pull/) - Contributed on behalf of STMicroelectronics
 
 <a name="breaking_changes_1.18.0">[Breaking Changes:](#breaking_changes_1.18.0)</a>
 

@@ -1,2 +1,4 @@
 profiles
 workspace
+*.json
+!base-package.json
