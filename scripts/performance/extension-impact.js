@@ -15,8 +15,12 @@
  ********************************************************************************/
 // @ts-check
 const { execSync } = require('child_process');
-const { copyFile, copyFileSync, readdirSync, writeFileSync, unlinkSync } = require('fs');
+const { copyFileSync, readdirSync, writeFileSync, unlinkSync } = require('fs');
 const mkdirp = require('mkdirp');
+const path = require('path');
+const env = Object.assign({}, process.env);
+env.PATH = path.resolve("../../node_modules/.bin") + path.delimiter + env.PATH;
+const basePackage = require(`./base-package.json`);
 let runs = 10;
 let baseTime;
 let extensions = [];
@@ -78,8 +82,6 @@ async function exitHandler() {
     prepareWorkspace();
     if (yarn) {
         execSync('yarn build', { cwd: '../../', stdio: 'pipe' });
-    } else {
-        execSync('yarn browser build', { cwd: '../../', stdio: 'pipe' });
     }
     await extensionImpact(extensions);
 })();
@@ -98,13 +100,11 @@ async function extensionImpact(extensions) {
 
     for (const e of extensions) {
         await calculateExtension(e);
-        copyBasePackage();
     }
 }
 
 function prepareWorkspace() {
     copyFileSync('../../examples/browser/package.json', './backup-package.json');
-    copyBasePackage();
     mkdirp('../../noPlugins', function (err) {
         if (err) {
             console.log(err);
@@ -115,14 +115,6 @@ function prepareWorkspace() {
 async function cleanWorkspace() {
     copyFileSync('./backup-package.json', '../../examples/browser/package.json');
     unlinkSync('./backup-package.json');
-}
-
-function copyBasePackage() {
-    copyFile('./base-package.json', '../../examples/browser/package.json', (err) => {
-        if (err) {
-            console.log(err);
-        }
-    });
 }
 
 async function getPackagesExtensions() {
@@ -141,20 +133,21 @@ async function getPackagesExtensions() {
 }
 
 async function calculateExtension(extensionQualifier) {
+    let package = JSON.parse(JSON.stringify(basePackage));
     if (extensionQualifier !== undefined) {
         const qualifier = extensionQualifier.replace(/"/g, '');
         const name = qualifier.substring(0, qualifier.lastIndexOf(':'));
         const version = qualifier.substring(qualifier.lastIndexOf(':') + 1);
-        const package = require(`../../examples/browser/package.json`);
         package.dependencies[name] = version;
-        writeFileSync(`../../examples/browser/package.json`, JSON.stringify(package, null, 2));
-        execSync('yarn browser build', { cwd: '../../', stdio: 'pipe' });
     } else {
         extensionQualifier = "Base Theia";
     }
+    writeFileSync(`../../examples/browser/package.json`, JSON.stringify(package, null, 2));
+    execSync('yarn browser build', { cwd: '../../', stdio: 'pipe' });
+
     let output = execSync(
         `concurrently --success first -k -r "cd scripts/performance && node measure-performance.js --name Startup --folder script --runs ${runs}${url ? ' --url ' + url : ''}" `
-        + `"yarn --cwd examples/browser start | grep -v '.*'"`, { cwd: '../../' });
+        + `"yarn --cwd examples/browser start | grep -v '.*'"`, { env: env, cwd: '../../' });
     let mean = parseFloat(getMeasurement(output, '[MEAN] Largest Contentful Paint (LCP):'));
     let stdev = parseFloat(getMeasurement(output, '[STDEV] Largest Contentful Paint (LCP):'));
 
