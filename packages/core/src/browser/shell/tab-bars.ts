@@ -37,6 +37,7 @@ import { HoverService } from '../hover-service';
 import { Root, createRoot } from 'react-dom/client';
 import { SelectComponent } from '../widgets/select-component';
 import { createElement } from 'react';
+import { PreviewableWidget } from '../widgets/previewable-widget';
 
 /** The class name added to hidden content nodes, which are required to render vertical side bars. */
 const HIDDEN_CONTENT_CLASS = 'theia-TabBar-hidden-content';
@@ -164,7 +165,9 @@ export class TabBarRenderer extends TabBar.Renderer {
             ? nls.localizeByDefault('Unpin')
             : nls.localizeByDefault('Close');
 
-        const hover = this.tabBar && (this.tabBar.orientation === 'horizontal' && !this.corePreferences?.['window.tabbar.enhancedPreview']) ? { title: title.caption } : {
+        const hover = this.tabBar && (this.tabBar.orientation === 'horizontal' && this.corePreferences?.['window.tabbar.enhancedPreview'] === 'classic')
+            ? { title: title.caption }
+            : {
             onmouseenter: this.handleMouseEnterEvent
         };
 
@@ -501,6 +504,54 @@ export class TabBarRenderer extends TabBar.Renderer {
         return hoverBox;
     };
 
+    protected renderVisualPreview(desiredWidth: number, title: Title<Widget>): HTMLElement | undefined {
+        const widgetId = title.owner.id;
+        // Check that the widget is not currently shown and that it was already loaded before
+        if (this.tabBar && this.tabBar.currentTitle !== title && PreviewableWidget.isPreviewable(title.owner)) {
+            const html = document.getElementById(widgetId);
+            if (html) {
+                const previewNode: Node | undefined = title.owner.getPreviewNode();
+                if (previewNode) {
+                    const node = previewNode.cloneNode(true);
+                    const visualPreviewDiv = document.createElement('div');
+                    visualPreviewDiv.classList.add('enhanced-preview-div');
+                    visualPreviewDiv.append(node);
+                    const preview = visualPreviewDiv.children.item(visualPreviewDiv.children.length - 1);
+                    if (preview instanceof HTMLElement) {
+                        preview.classList.remove('p-mod-hidden');
+                        preview.classList.add('enhanced-preview');
+                        preview.id = `preview:${widgetId}`;
+
+                        // Use the current visible editor as a fallback if not available
+                        const height: number = preview.style.height === '' ? this.tabBar.currentTitle!.owner.node.offsetHeight : parseFloat(preview.style.height);
+                        const width: number = preview.style.width === '' ? this.tabBar.currentTitle!.owner.node.offsetWidth : parseFloat(preview.style.width);
+                        const ratio = height / width;
+                        visualPreviewDiv.style.width = `${desiredWidth}px`;
+                        visualPreviewDiv.style.height = `${desiredWidth * ratio}px`;
+
+                        const scale = desiredWidth / width;
+                        preview.style.transform = `scale(${scale},${scale})`;
+                        preview.style.removeProperty('top');
+                        preview.style.removeProperty('left');
+
+                        // Copy canvases (They are cloned empty)
+                        const originalCanvases = html.getElementsByTagName('canvas');
+                        const previewCanvases = preview.getElementsByTagName('canvas');
+                        // If this is not given, something went wrong during the cloning
+                        if (originalCanvases.length === previewCanvases.length) {
+                            for (let i = 0; i < originalCanvases.length; i++) {
+                                previewCanvases[i].getContext('2d')?.drawImage(originalCanvases[i], 0, 0);
+                            }
+                        }
+
+                        return visualPreviewDiv;
+                    }
+                }
+            }
+        }
+        return undefined;
+    }
+
     protected handleMouseEnterEvent = (event: MouseEvent) => {
         if (this.tabBar && this.hoverService && event.currentTarget instanceof HTMLElement) {
             const id = event.currentTarget.id;
@@ -511,7 +562,8 @@ export class TabBarRenderer extends TabBar.Renderer {
                         content: this.renderEnhancedPreview(title),
                         target: event.currentTarget,
                         position: 'bottom',
-                        cssClasses: ['extended-tab-preview']
+                        cssClasses: ['extended-tab-preview'],
+                        visualPreview: this.corePreferences?.['window.tabbar.enhancedPreview'] === 'visual' ? width => this.renderVisualPreview(width, title) : undefined
                     });
                 } else {
                     this.hoverService.requestHover({

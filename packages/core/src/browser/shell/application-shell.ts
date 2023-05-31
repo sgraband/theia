@@ -43,6 +43,7 @@ import { nls } from '../../common/nls';
 import { SecondaryWindowHandler } from '../secondary-window-handler';
 import URI from '../../common/uri';
 import { OpenerService } from '../opener-service';
+import { PreviewableWidget } from '../widgets/previewable-widget';
 
 /** The class name added to ApplicationShell instances. */
 const APPLICATION_SHELL_CLASS = 'theia-ApplicationShell';
@@ -1137,6 +1138,9 @@ export class ApplicationShell extends Widget {
             // Reset the z-index to the default
             // eslint-disable-next-line no-null/no-null
             this.setZIndex(oldValue.node, null);
+            if (PreviewableWidget.is(oldValue)) {
+                oldValue.loaded = true;
+            }
         }
         if (newValue) {
             let w: Widget | null = newValue;

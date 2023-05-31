@@ -1,3 +1,4 @@
+/* eslint-disable no-unsanitized/method */
 // *****************************************************************************
 // Copyright (C) 2018 Red Hat, Inc. and others.
 //
@@ -28,6 +29,7 @@ import { BaseWidget, Message } from '@theia/core/lib/browser/widgets/widget';
 import { Disposable, DisposableCollection } from '@theia/core/lib/common/disposable';
 import { ApplicationShellMouseTracker } from '@theia/core/lib/browser/shell/application-shell-mouse-tracker';
 import { StatefulWidget } from '@theia/core/lib/browser/shell/shell-layout-restorer';
+import { PreviewableWidget } from '@theia/core/lib/browser/widgets/previewable-widget';
 import { WebviewPanelViewState } from '../../../common/plugin-api-rpc';
 import { IconUrl } from '../../../common/plugin-protocol';
 import { Deferred } from '@theia/core/lib/common/promise-util';
@@ -88,7 +90,7 @@ export class WebviewWidgetIdentifier {
 export const WebviewWidgetExternalEndpoint = Symbol('WebviewWidgetExternalEndpoint');
 
 @injectable()
-export class WebviewWidget extends BaseWidget implements StatefulWidget, ExtractableWidget, BadgeWidget {
+export class WebviewWidget extends BaseWidget implements StatefulWidget, ExtractableWidget, BadgeWidget, PreviewableWidget {
 
     private static readonly standardSupportedLinkSchemes = new Set([
         Schemes.http,
@@ -356,6 +358,22 @@ export class WebviewWidget extends BaseWidget implements StatefulWidget, Extract
         while (this.pendingMessages.length) {
             this.sendMessage(this.pendingMessages.shift());
         }
+    }
+
+    override getPreviewNode(): Node | undefined {
+        // const iframe = document.createElement('iframe');
+        // iframe.className = 'webview';
+        // iframe.sandbox.add('allow-scripts', 'allow-forms', 'allow-same-origin', 'allow-downloads');
+        // iframe.setAttribute('src', `data:text/html;charset=utf-8,${this.html}`);
+        const div = document.createElement('div');
+        // eslint-disable-next-line no-unsanitized/property
+        div.innerHTML = this.html;
+        for (const child of div.children) {
+            if (child.tagName === 'script' || child.tagName === 'meta') {
+                div.removeChild(child);
+            }
+        }
+        return div;
     }
 
     protected async loadLocalhost(origin: string): Promise<void> {
