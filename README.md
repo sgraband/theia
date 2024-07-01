@@ -23,7 +23,7 @@
 
 <div style='margin:0 auto;width:80%;'>
 
-![Theia](https://raw.githubusercontent.com/eclipse-theia/theia/master/doc/images/theia-screenshot.png)
+![Theia ](https://raw.githubusercontent.com/eclipse-theia/theia/master/doc/images/theia-screenshot.png)
 
 </div>
 
